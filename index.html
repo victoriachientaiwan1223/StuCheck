@@ -77,7 +77,8 @@
       font-weight: 650;
     }
 
-    input {
+    input,
+    select {
       width: 100%;
       min-height: 46px;
       padding: 10px 12px;
@@ -88,7 +89,8 @@
       font: inherit;
     }
 
-    input:focus {
+    input:focus,
+    select:focus {
       border-color: var(--primary);
       outline: 3px solid var(--focus);
       outline-offset: 1px;
@@ -174,6 +176,25 @@
       min-width: 0;
       margin: 0;
       overflow-wrap: anywhere;
+    }
+
+    select {
+      appearance: auto;
+    }
+
+    .field-note {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+    }
+
+    .record-actions {
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .record-actions button {
+      margin-top: 20px;
     }
 
     .status {
