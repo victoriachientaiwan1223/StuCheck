@@ -20,7 +20,7 @@ const FIELD_DEFINITIONS = [
 const STATUS_FIELDS = new Set(FIELD_DEFINITIONS.filter((field) => field.type === "status").map((field) => field.name));
 const EDITABLE_FIELDS = FIELD_DEFINITIONS.filter((field) => field.type !== "readonly").map((field) => field.name);
 const HOUSING_OPTIONS = ["住家裡", "住校", "在外租屋"];
-const TRANSPORT_OPTIONS = ["家長接送", "大眾運輸", "自行開車", "機車", "步行", "其他"];
+const TRANSPORT_OPTIONS = ["汽車", "機車", "大眾運輸", "步行", "其他"];
 const EMPTY_LABEL = "未完成/未回報";
 
 const form = document.getElementById("search-form");
@@ -241,7 +241,10 @@ function canonicalEditorValue(definition, value) {
     const normalizedHousing = text === "住宿" ? "住校" : text;
     return HOUSING_OPTIONS.includes(normalizedHousing) ? normalizedHousing : "";
   }
-  if (definition.type === "transport") return TRANSPORT_OPTIONS.includes(text) ? text : "";
+  if (definition.type === "transport") {
+    const normalizedTransport = text === "家長接送" || text === "自行開車" ? "汽車" : text;
+    return TRANSPORT_OPTIONS.includes(normalizedTransport) ? normalizedTransport : "";
+  }
   return text;
 }
 
