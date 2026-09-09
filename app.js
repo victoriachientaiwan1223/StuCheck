@@ -215,7 +215,7 @@ function createEditorControl(definition, rawValue) {
   select.dataset.field = definition.name;
   select.setAttribute("aria-label", definition.name);
   if (definition.type === "status") {
-    addOption(select, "", "清空");
+    addOption(select, "", EMPTY_LABEL);
     addOption(select, "已完成", "已完成");
   } else {
     addOption(select, "", "請選擇", true);
