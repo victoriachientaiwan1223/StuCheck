@@ -8,10 +8,10 @@ const FIELD_DEFINITIONS = [
   { name: "加入班群", type: "status" },
   { name: "租賃校外調查表", type: "status" },
   { name: "住宿", type: "housing" },
-  { name: "在外租屋(選填)", type: "text", conditional: "offCampus" },
+  { name: "租屋地址", type: "text", conditional: "offCampus" },
   { name: "宿舍", type: "readonly", conditional: "dormitory" },
   { name: "到校交通工具", type: "transport" },
-  { name: "其他(選填)", type: "text", conditional: "otherTransport" },
+  { name: "交通工具", type: "text", conditional: "otherTransport" },
   { name: "新生線上心理健檢活動", type: "status" },
   { name: "UCAN系統", type: "status" },
   { name: "新生問卷", type: "status" },
@@ -266,8 +266,8 @@ function handleEditorChange(event) {
 function syncConditionalFields(editor) {
   const housing = fieldControl(editor, "住宿").value;
   const transport = fieldControl(editor, "到校交通工具").value;
-  const offCampusInput = fieldControl(editor, "在外租屋(選填)");
-  const otherTransportInput = fieldControl(editor, "其他(選填)");
+  const offCampusInput = fieldControl(editor, "租屋地址");
+  const otherTransportInput = fieldControl(editor, "交通工具");
   const isOffCampus = housing === "在外租屋";
   const isOtherTransport = transport === "其他";
 
