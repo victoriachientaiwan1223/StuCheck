@@ -19,7 +19,7 @@ const FIELD_DEFINITIONS = [
 
 const STATUS_FIELDS = new Set(FIELD_DEFINITIONS.filter((field) => field.type === "status").map((field) => field.name));
 const EDITABLE_FIELDS = FIELD_DEFINITIONS.filter((field) => field.type !== "readonly").map((field) => field.name);
-const HOUSING_OPTIONS = ["住宿", "在外租屋"];
+const HOUSING_OPTIONS = ["住家裡", "住校", "在外租屋"];
 const TRANSPORT_OPTIONS = ["家長接送", "大眾運輸", "自行開車", "機車", "步行", "其他"];
 const EMPTY_LABEL = "未完成/未回報";
 
@@ -237,7 +237,10 @@ function addOption(select, value, label, disabled = false) {
 function canonicalEditorValue(definition, value) {
   const text = value == null ? "" : String(value).trim();
   if (definition.type === "status") return text === "已完成" ? "已完成" : "";
-  if (definition.type === "housing") return HOUSING_OPTIONS.includes(text) ? text : "";
+  if (definition.type === "housing") {
+    const normalizedHousing = text === "住宿" ? "住校" : text;
+    return HOUSING_OPTIONS.includes(normalizedHousing) ? normalizedHousing : "";
+  }
   if (definition.type === "transport") return TRANSPORT_OPTIONS.includes(text) ? text : "";
   return text;
 }
@@ -272,7 +275,7 @@ function syncConditionalFields(editor) {
   const isOtherTransport = transport === "其他";
 
   editor.querySelector('[data-conditional="offCampus"]').hidden = !isOffCampus;
-  editor.querySelector('[data-conditional="dormitory"]').hidden = housing !== "住宿";
+  editor.querySelector('[data-conditional="dormitory"]').hidden = housing !== "住校";
   editor.querySelector('[data-conditional="otherTransport"]').hidden = !isOtherTransport;
   offCampusInput.required = isOffCampus;
   otherTransportInput.required = isOtherTransport;
@@ -350,7 +353,7 @@ function normalizeDisplayValue(value) {
 }
 
 function statusClass(value) {
-  if (value === "已完成" || value === "住宿") return "success";
+  if (value === "已完成" || value === "住校" || value === "住宿") return "success";
   if (value === EMPTY_LABEL) return "neutral";
   return "";
 }
