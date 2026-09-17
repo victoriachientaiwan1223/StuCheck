@@ -15,6 +15,8 @@ const FIELD_DEFINITIONS = [
   { name: "新生線上心理健檢活動", type: "status" },
   { name: "UCAN系統", type: "status" },
   { name: "新生問卷", type: "status" },
+  { name: "學生健康資料卡", type: "status" },
+  { name: "健康檢查報告上傳", type: "status" },
 ];
 
 const STATUS_FIELDS = new Set(FIELD_DEFINITIONS.filter((field) => field.type === "status").map((field) => field.name));
