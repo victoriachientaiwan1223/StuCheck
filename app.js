@@ -24,6 +24,8 @@ const EDITABLE_FIELDS = FIELD_DEFINITIONS.filter((field) => field.type !== "read
 const HOUSING_OPTIONS = ["住家裡", "住校", "在外租屋"];
 const TRANSPORT_OPTIONS = ["汽車", "機車", "大眾運輸", "步行", "其他"];
 const EMPTY_LABEL = "未完成/未回報";
+const SEARCH_TIMEOUT_MS = 25000;
+const SAVE_TIMEOUT_MS = 30000;
 
 const form = document.getElementById("search-form");
 const nameInput = document.getElementById("name");
@@ -54,15 +56,23 @@ async function handleSearch(event) {
   }
 
   setSearchLoading(true);
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
   try {
     const url = new URL(apiUrl);
     url.searchParams.set("name", name);
     url.searchParams.set("phone", phone);
-    const response = await fetch(url, { method: "GET", cache: "no-store", signal: controller.signal });
-    const payload = await readJsonResponse(response);
+    const payload = await requestJsonWithRetry(
+      url,
+      { method: "GET", cache: "no-store" },
+      {
+        timeoutMs: SEARCH_TIMEOUT_MS,
+        retries: 1,
+        onRetry: () => {
+          setSearchLoading(true, true);
+          showMessage("連線較慢，正在重新查詢…", false);
+        },
+      },
+    );
 
     if (!payload.ok || !Array.isArray(payload.data)) {
       showMessage(payload.error || "查詢服務暫時無法使用，請稍後再試。", true);
@@ -77,12 +87,12 @@ async function handleSearch(event) {
       return;
     }
 
+    message.hidden = true;
     currentSession = { name, phone, original: payload.data[0] };
     renderEditor(payload.data[0]);
   } catch (error) {
     handleRequestError(error);
   } finally {
-    window.clearTimeout(timeoutId);
     setSearchLoading(false);
   }
 }
@@ -107,8 +117,6 @@ async function handleSave(event) {
 
   const saveButton = editor.querySelector("[data-save]");
   setSaveLoading(saveButton, true);
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 20000);
 
   try {
     const body = new URLSearchParams({
@@ -116,8 +124,11 @@ async function handleSave(event) {
       phone: currentSession.phone,
       updates: JSON.stringify(updates),
     });
-    const response = await fetch(getApiUrl(), { method: "POST", body, cache: "no-store", signal: controller.signal });
-    const payload = await readJsonResponse(response);
+    const payload = await requestJsonWithTimeout(
+      getApiUrl(),
+      { method: "POST", body, cache: "no-store" },
+      SAVE_TIMEOUT_MS,
+    );
 
     if (!payload.ok || !Array.isArray(payload.data) || payload.data.length !== 1) {
       showMessage(payload.error || "資料儲存失敗，請稍後再試。", true);
@@ -128,11 +139,53 @@ async function handleSave(event) {
     renderEditor(payload.data[0]);
     showMessage("資料已儲存。", false);
   } catch (error) {
-    handleRequestError(error, "資料儲存失敗，請稍後再試。");
+    handleRequestError(
+      error,
+      "資料儲存失敗，請稍後再試。",
+      "儲存要求逾時，結果可能已寫入；請重新查詢確認。",
+    );
   } finally {
-    window.clearTimeout(timeoutId);
     if (saveButton.isConnected) setSaveLoading(saveButton, false);
   }
+}
+
+async function requestJsonWithRetry(url, options, settings) {
+  const retries = settings.retries || 0;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await requestJsonWithTimeout(url, options, settings.timeoutMs);
+    } catch (error) {
+      const canRetry = attempt < retries && isRetryableRequestError(error);
+      if (!canRetry) throw error;
+      if (settings.onRetry) settings.onRetry(error, attempt + 1);
+    }
+  }
+  throw new Error("Request retry state is invalid");
+}
+
+async function requestJsonWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return await readJsonResponse(response);
+  } catch (error) {
+    if (!timedOut) throw error;
+    const timeoutError = new Error("Request timed out");
+    timeoutError.name = "TimeoutError";
+    throw timeoutError;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function isRetryableRequestError(error) {
+  return Boolean(error && ["AbortError", "TimeoutError", "TypeError"].includes(error.name));
 }
 
 async function readJsonResponse(response) {
@@ -140,8 +193,12 @@ async function readJsonResponse(response) {
   return response.json();
 }
 
-function handleRequestError(error, fallback = "查詢服務暫時無法使用，請稍後再試。") {
-  showMessage(error.name === "AbortError" ? "連線逾時，請稍後再試。" : fallback, true);
+function handleRequestError(
+  error,
+  fallback = "查詢服務暫時無法使用，請稍後再試。",
+  timeoutMessage = "連線逾時，請稍後再試。",
+) {
+  showMessage(["AbortError", "TimeoutError"].includes(error.name) ? timeoutMessage : fallback, true);
   console.error("Student data request failed", error);
 }
 
@@ -342,9 +399,9 @@ function showMessage(text, isError = false) {
   message.hidden = false;
 }
 
-function setSearchLoading(isLoading) {
+function setSearchLoading(isLoading, isRetrying = false) {
   searchButton.disabled = isLoading;
-  searchButton.textContent = isLoading ? "查詢中…" : "查詢";
+  searchButton.textContent = isLoading ? (isRetrying ? "重新查詢中…" : "查詢中…") : "查詢";
 }
 
 function setSaveLoading(button, isLoading) {
